@@ -31,20 +31,11 @@ let safetyInspection (report: int list) =
     |> levelIncreasePairwiser
     |> List.forall (isPairSafe)
 
-let safetyInspectionWithDampener (report: int list) =
-    let reportsRanked =
-        report
-        |> levelIncreasePairwiser
-        |> List.map (fun levelTuple -> (isPairSafe levelTuple, levelTuple))
-    let unsafeLevels = reportsRanked |> List.where (fst >> not)
-    if unsafeLevels.Length = 0 then true
-    else false
-
 let safetyInspectionBruteDamper (report: int list) =
-    if safetyInspectionWithDampener report then true
+    if safetyInspection report then true
     else 
         let bruteReports = 
-            report |> List.mapi (fun i _ -> report |> List.removeAt i |> safetyInspectionWithDampener)
+            report |> List.mapi (fun i _ -> report |> List.removeAt i |> safetyInspection)
         bruteReports |> List.exists (fun f -> f = true)
 
 let reportCalculator (reports: bool list) = reports |> List.where (fun f -> f = true) |> List.length
