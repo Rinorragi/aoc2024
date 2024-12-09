@@ -62,6 +62,38 @@ let calculateChecksum (diskMap: DiskBlock list) =
         | File -> (i |> int64) * (db.id |> int64))
     |> List.sum
 
+let fillFromRightToLeftInBlocks (diskMap: DiskBlock list) =
+    List.foldBack (fun (db: DiskBlock) (modifiedDiskMap: DiskBlock list) -> 
+        match db.kind with 
+        | Free -> modifiedDiskMap 
+        | File -> 
+            let findIndex = modifiedDiskMap |> List.findIndexBack (fun dbToMatch -> dbToMatch = db)
+            let findFreeOption = modifiedDiskMap |> List.tryFindIndex (fun freeToMatch -> freeToMatch.kind = Free && freeToMatch.size >= db.size)
+            match findFreeOption with
+            | None -> modifiedDiskMap
+            | _ -> 
+                let freeIndex = Option.get findFreeOption
+                let freeBlock = modifiedDiskMap.[freeIndex]
+                if freeIndex > findIndex then modifiedDiskMap
+                elif freeBlock.size = db.size
+                then
+                    modifiedDiskMap 
+                    |> List.removeAt freeIndex 
+                    |> List.insertAt freeIndex db
+                    |> List.removeAt findIndex
+                    |> List.insertAt findIndex freeBlock
+                else 
+                    let reminderFreeBlock = { id = 0; size = freeBlock.size - db.size; kind = Free}
+                    let freedFreeBlock = { id = 0; size = db.size; kind = Free}
+                    modifiedDiskMap
+                    |> List.removeAt freeIndex
+                    |> List.insertAt freeIndex db
+                    |> List.removeAt findIndex
+                    |> List.insertAt findIndex freedFreeBlock
+                    |> List.insertAt (freeIndex + 1) reminderFreeBlock
+    ) diskMap diskMap 
+    
+
 let exampleInput = parseInput "./input/day09_example.txt"
 exampleInput
 |> stretchFileFormat
@@ -69,9 +101,21 @@ exampleInput
 |> calculateChecksum
 |> printfn "Example answer 1: %d"
 
+exampleInput
+|> fillFromRightToLeftInBlocks
+|> stretchFileFormat
+|> calculateChecksum
+|> printfn "Example answer 2: %d"
+
 let input = parseInput "./input/day09.txt"
 input
 |> stretchFileFormat
 |> fillFromRightToLeft
 |> calculateChecksum
 |> printfn "Answer 1: %d"
+
+input
+|> fillFromRightToLeftInBlocks
+|> stretchFileFormat
+|> calculateChecksum
+|> printfn "Answer 2: %d"
